@@ -6,7 +6,6 @@ CREDITS: https://gist.github.com/andreif/6069838 (Andrei Fokau)
 """
 import datetime
 import sys
-import time
 import threading
 import traceback
 import socketserver
@@ -22,7 +21,7 @@ D = DomainName('example.com')
 DOMAIN = 'xaled.com'
 IP = '10.1.1.1'
 TTL = 60 * 5
-PORT = 53
+PORT = 53001
 
 soa_record = SOA(
     mname=D.ns1,  # primary name server
@@ -125,7 +124,7 @@ class UDPRequestHandler(BaseRequestHandler):
         return self.request[1].sendto(data, self.client_address)
 
 
-if __name__ == '__main__':
+def main():
     print("Starting nameserver...")
 
     servers = [
@@ -150,3 +149,8 @@ if __name__ == '__main__':
     finally:
         for s in servers:
             s.shutdown()
+
+
+
+if __name__ == '__main__':
+    main()
