@@ -12,41 +12,21 @@ import socketserver
 from dnslib import *
 
 
-class DomainName(str):
-    def __getattr__(self, item):
-        return DomainName(item + '.' + self)
-
-
-D = DomainName('example.com')
-DOMAIN = 'xaled.com'
-IP = '10.1.1.1'
+DOMAIN = os.getenv("CERTBOT_DOMAIN")
+if DOMAIN.startswith("*."):
+    DOMAIN = DOMAIN[2:]
+if DOMAIN.endswith("."):
+    DOMAIN = DOMAIN[:-1]
+print(DOMAIN)
+# IP = '10.1.1.1'
 TTL = 60 * 5
-PORT = 53001
-
-soa_record = SOA(
-    mname=D.ns1,  # primary name server
-    rname=D.andrei,  # email of the domain administrator
-    times=(
-        201307231,  # serial number
-        60 * 60 * 1,  # refresh
-        60 * 60 * 3,  # retry
-        60 * 60 * 24,  # expire
-        60 * 60 * 1,  # minimum
-    )
-)
-ns_records = [NS(D.ns1), NS(D.ns2)]
-records = {
-    D: [A(IP), AAAA((0,) * 16), MX(D.mail), soa_record] + ns_records,
-    D.ns1: [A(IP)],  # MX and NS records must never point to a CNAME alias (RFC 2181 section 10.3)
-    D.ns2: [A(IP)],
-    # D.txt: [TXT(b"text aaaaa")]
-}
-
+PORT = 53
+SLEEP = 60 * 1
 RECORDS = {
-    'TXT': ('TXT', TXT(b'walop')),
-    'A': ('A', A(IP)),
-    '*': ('A', A(IP)),
+    'TXT': ('TXT', TXT(os.getenv("CERTBOT_VALIDATION").encode())),
 }
+
+
 def dns_response(data):
     request = DNSRecord.parse(data)
 
@@ -58,9 +38,11 @@ def dns_response(data):
     qn = str(qname)
     qtype = request.q.qtype
     qt = QTYPE[qtype]
-    print(qn)
-    if qn == DOMAIN or qn == DOMAIN + '.':  # or qn.endswith('.' + D):
-        print(DOMAIN)
+    # print(qn)
+    print(qn, qt)
+    if qn.endswith(DOMAIN) or qn.endswith(DOMAIN+'.'):
+        print(request)
+        # print(DOMAIN)
         # for name, rrs in records.iteritems():
         # if name == qn:
         # for rdata in rrs:
@@ -138,18 +120,18 @@ def main():
         print("%s server loop running in thread: %s" % (s.RequestHandlerClass.__name__[:3], thread.name))
 
     try:
-        while 1:
-            time.sleep(1)
-            sys.stderr.flush()
-            sys.stdout.flush()
+
+        time.sleep(SLEEP)
+        sys.stderr.flush()
+        sys.stdout.flush()
 
     except KeyboardInterrupt:
         print("Keyboard Interrupt")
         sys.exit(0)
     finally:
+        print("Shutting Down.")
         for s in servers:
             s.shutdown()
-
 
 
 if __name__ == '__main__':
